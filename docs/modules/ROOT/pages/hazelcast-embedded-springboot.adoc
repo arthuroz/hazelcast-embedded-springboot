@@ -1,4 +1,4 @@
-= Get Started with Hazelcast using Spring Boot
+= Get Started with Hazelcast using Spring Boot in AWS ECS Fargate
 :templates-url: templates:ROOT:page$/
 :page-layout: tutorial
 :page-product: imdg
@@ -7,6 +7,7 @@
 :page-edition: 
 :page-est-time: 15 mins
 :framework: Spring Boot
+:environment: AWS Ecs Fargate
 :description: This tutorial will get you started with Hazelcast in a Spring Boot application.
 
 == What You’ll Learn
@@ -37,7 +38,7 @@ Hazelcast configuration (`hazelcast.yaml`) is placed in the `src/main/resources/
 include::ROOT:example$hazelcast-embedded-springboot/src/main/java/guides/hazelcast/springboot/CommandController.java[]
 ----
 
-== Run the Sample Application
+== Run the Sample Application locally
 
 Run the application using Maven in a terminal:
 
@@ -94,6 +95,38 @@ If the tests pass, you’ll see a similar output to the following:
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 ----
+
+== Bootstrap infrastructure in AWS Ecs Fargate
+
+===
+----
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
+export AWS_ACCOUNT_ID=097519409277
+export AWS_DEFAULT_REGION=ap-southeast-2
+export STACK_NAME=hazelcast-sample
+export PROJECT_NAME=hazelcast-sample
+export AWS_PROFILE=arthur
+
+aws cloudformation deploy \
+    --no-fail-on-empty-changeset \
+    --stack-name ${STACK_NAME} \
+    --template-file "$DIR/infrastructure/ecs-fargate-sample.yaml" \
+    --capabilities CAPABILITY_IAM \
+    --parameter-overrides \
+    "ProjectName=${PROJECT_NAME}"
+
+endpoint=$(aws cloudformation describe-stacks --stack-name="${STACK_NAME}" --query="Stacks[0].Outputs[?OutputKey=='SampleEndpoint'].OutputValue" --output=text)
+
+curl $endpoint/get?key=key1
+
+aws cloudformation delete-stack --stack-name $STACK_NAME
+
+----
+- **What happened?**
+- Create ECS Cluster to run ECS services
+- Create VPC with two public subnets and two private subnets
+- Create Internet facing ALB for sample app
+- Create ECS service for 'sample' app that registers targets behind above ALB.
 
 == Summary
 
